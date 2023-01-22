@@ -1,0 +1,1 @@
+modbus-crc~=1.3
