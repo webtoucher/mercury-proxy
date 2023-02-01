@@ -2,17 +2,12 @@
 import logging
 import sys
 
-from mercury_base import Meter
-from mercury_base.utils import hex_str
-from modbus_crc import check_crc
+from mercury_base import Meter, MetersEventListener, check_crc, hex_str
 from socket import socket
 from simple_socket_server import SimpleSocketServer
 from typing import Optional
 
-
 if __name__ == '__main__':
-    server = SimpleSocketServer()
-
     log_handler = logging.StreamHandler(sys.stderr)
     log_handler.setFormatter(
         logging.Formatter("[%(asctime)s] %(levelname)s\t%(message)s")
@@ -22,10 +17,9 @@ if __name__ == '__main__':
     logger.setLevel(logging.INFO)
     logger.addHandler(log_handler)
 
+    server = SimpleSocketServer()
+    meters_listener = MetersEventListener()
     meters = []
-    my_meter = Meter(37793503, '/dev/ttyACM0', logger=logger)
-    logger.info('Meter type: %s', my_meter.model)
-    meters.append(my_meter)
 
 
     def find_by_package(package: bytes) -> Optional[Meter]:
@@ -59,5 +53,24 @@ if __name__ == '__main__':
                 logger.info('[%s:%s] <-- [proxy]\t%s', *sock.getpeername(), hex_str(answer, ' '))
                 server.send(sock, answer)
 
+
+    @meters_listener.on_connect
+    def on_connect(meter: Meter):
+        logger.info('Meter M%s with serial number %s is connected', meter.model, meter.serial_number)
+
+
+    @meters_listener.on_request
+    def on_request(meter: Meter, package: bytes):
+        logger.debug('[proxy] --> [%s]\t%s', meter.serial_number or 'new meter', hex_str(package, ' '))
+
+
+    @meters_listener.on_answer
+    def on_answer(meter: Meter, package: bytes):
+        logger.debug('[proxy] <-- [%s]\t%s', meter.serial_number or 'new meter', hex_str(package, ' '))
+
+
+    my_meter = Meter(37793503, '/dev/ttyACM0', listener=meters_listener)
+    if my_meter:
+        meters.append(my_meter)
 
     server.run(port=5051)
