@@ -19,4 +19,10 @@ setup(name='mercury-proxy',
       packages=find_packages(),
       long_description=open('README.md').read(),
       long_description_content_type='text/markdown',
+      install_requires=[
+          'mercury-base~=1.0a6',
+          'modbus-crc~=1.3',
+          'pyserial~=3.0',
+          'simple-socket-server~=1.0',
+      ],
       zip_safe=False)
