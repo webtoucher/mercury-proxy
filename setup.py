@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='mercury-proxy',
       version='1.0',
@@ -11,12 +11,12 @@ setup(name='mercury-proxy',
           'Development Status :: 1 - Planning',
           'Intended Audience :: Developers',
           'Topic :: Internet :: Proxy Servers',
-          'Topic :: Terminal :: Serial',
+          'Topic :: Terminals :: Serial',
           'License :: OSI Approved :: BSD License',
           'Programming Language :: Python :: 3',
           'Operating System :: Unix',
       ],
-      packages=['mercury_proxy'],
+      packages=find_packages(),
       long_description=open('README.md').read(),
       long_description_content_type='text/markdown',
       zip_safe=False)
