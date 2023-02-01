@@ -23,6 +23,6 @@ setup(name='mercury-proxy',
           'mercury-base~=1.0a6',
           'modbus-crc~=1.3',
           'pyserial~=3.0',
-          'simple-socket-server~=1.0',
+          'simple-socket-server~=1.1a',
       ],
       zip_safe=False)
