@@ -2,56 +2,68 @@
 import logging
 import sys
 
-from mercury_base import Meter, MetersEventListener, check_crc, hex_str
+from mercury_base import Meter, Meters, MetersEventListener, check_crc, hex_str
+from mercury_proxy.api import Api
 from socket import socket
 from simple_socket_server import SimpleSocketServer
-from typing import Optional
+
+
+with_api = True
+
 
 if __name__ == '__main__':
+    meters_listener = MetersEventListener()
+    meters = Meters(meters_listener)
+
+    socket_server = SimpleSocketServer()
+
+    if with_api:
+        api = Api(meters)
+        logger = api.logger
+    else:
+        api = None
+        logger = logging.getLogger(__name__)
+
     log_handler = logging.StreamHandler(sys.stderr)
     log_handler.setFormatter(
         logging.Formatter("[%(asctime)s] %(levelname)s\t%(message)s")
     )
-    logger = logging.getLogger('mercury')
+    logger.handlers = [log_handler]
+
     # logger.setLevel(logging.DEBUG)
     logger.setLevel(logging.INFO)
-    logger.addHandler(log_handler)
-
-    server = SimpleSocketServer()
-    meters_listener = MetersEventListener()
-    meters = []
 
 
-    def find_by_package(package: bytes) -> Optional[Meter]:
-        return next((meter for meter in meters if meter.test_package(package)), None)
-
-
-    @server.on_start
+    @socket_server.on_start
     def on_start(ip: str, port: int):
         logger.info('Proxy server is listening on %s:%s', ip, port)
 
 
-    @server.on_connect
+    @socket_server.on_connect
     def on_connect(sock: socket):
-        logger.info('New connection from %s:%s', *sock.getpeername())
+        logger.debug('New connection from %s:%s', *sock.getpeername())
 
 
-    @server.on_disconnect
+    @socket_server.on_disconnect
     def on_disconnect(sock: socket):
-        logger.info('Connection from %s:%s is closed', *sock.getpeername())
+        logger.debug('Connection from %s:%s is closed', *sock.getpeername())
 
 
-    @server.on_message
+    @socket_server.on_message
     def on_message(sock: socket, message: bytes):
-        logger.info('[%s:%s] --> [proxy]\t%s', *sock.getpeername(), hex_str(message, ' '))
+        if bytearray(message)[:1].isalpha():
+            logger.warning('It looks like the socket request is HTTP')
+            raise ConnectionResetError()
+        logger.debug('[%s:%s] --> [proxy]\t%s', *sock.getpeername(), hex_str(message, ' '))
         if not check_crc(message):
             logger.warning('Package from %s:%s has wrong checksum', *sock.getpeername())
-        meter = find_by_package(message)
+            return
+        meter = meters.find_by_package(message)
         if meter:
             answer = meter.send_package(message)
             if answer:
-                logger.info('[%s:%s] <-- [proxy]\t%s', *sock.getpeername(), hex_str(answer, ' '))
-                server.send(sock, answer)
+                logger.debug('[%s:%s] <-- [proxy]\t%s', *sock.getpeername(), hex_str(answer, ' '))
+                socket_server.send(sock, answer)
 
 
     @meters_listener.on_connect
@@ -69,8 +81,8 @@ if __name__ == '__main__':
         logger.debug('[proxy] <-- [%s]\t%s', meter.serial_number or 'new meter', hex_str(package, ' '))
 
 
-    my_meter = Meter(37793503, '/dev/ttyACM0', listener=meters_listener)
-    if my_meter:
-        meters.append(my_meter)
+    meters.connect_meter(37793503, '/dev/ttyACM0')
 
-    server.run(port=5051)
+    if api:
+        api.run(port=5052)
+    socket_server.run(port=5051)

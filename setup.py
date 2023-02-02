@@ -20,9 +20,11 @@ setup(name='mercury-proxy',
       long_description=open('README.md').read(),
       long_description_content_type='text/markdown',
       install_requires=[
-          'mercury-base~=1.0a7',
+          'flask~=2.2.2',
+          'mercury-base~=1.0a11',
           'modbus-crc~=1.3',
           'pyserial~=3.0',
-          'simple-socket-server~=1.1',
+          'simple-socket-server~=1.3',
+          'waitress~=2.1.2',
       ],
       zip_safe=False)
