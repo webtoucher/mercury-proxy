@@ -2,7 +2,7 @@
 import logging
 import sys
 
-from mercury_base import Meter, Meters, MetersEventListener, check_crc, hex_str
+from mercury_base import Meter, Meters, MetersEventListener, SerialDataTransport, check_crc, hex_str
 from mercury_proxy.api import Api
 from socket import socket
 from simple_socket_server import SimpleSocketServer
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     )
     logger.handlers = [log_handler]
 
-    # logger.setLevel(logging.DEBUG)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
+    # logger.setLevel(logging.INFO)
 
 
     @socket_server.on_start
@@ -57,6 +57,7 @@ if __name__ == '__main__':
         logger.debug('[%s:%s] --> [proxy]\t%s', *sock.getpeername(), hex_str(message, ' '))
         if not check_crc(message):
             logger.warning('Package from %s:%s has wrong checksum', *sock.getpeername())
+            socket_server.send(sock, b'')
             return
         meter = meters.find_by_package(message)
         if meter:
@@ -81,7 +82,7 @@ if __name__ == '__main__':
         logger.debug('[proxy] <-- [%s]\t%s', meter.serial_number or 'new meter', hex_str(package, ' '))
 
 
-    meters.connect_meter(37793503, '/dev/ttyACM0')
+    meters.connect_meter(37793503, SerialDataTransport('/dev/ttyACM0'))
 
     if api:
         api.run(port=5052)
