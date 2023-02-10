@@ -21,8 +21,8 @@ setup(name='mercury-proxy',
       long_description_content_type='text/markdown',
       install_requires=[
           'flask~=2.2.2',
-          'mercury-base~=1.0a14',
-          'simple-socket-server~=1.3',
+          'mercury-base~=1.2',
+          'simple-socket-server~=1.8',
           'waitress~=2.1.2',
       ],
       zip_safe=False)
